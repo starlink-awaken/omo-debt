@@ -253,3 +253,64 @@ For detailed algorithm design, see:
 - Source code: `src/omo_debt/honesty/`
 - Unit tests: `tests/unit/test_honesty.py` (25 tests, 100% pass rate)
 
+
+## Pattern 09 v2.1: Honesty Dimension
+
+**New in v0.2.0**: Assess technical debt disclosure quality.
+
+### Quick Start
+
+```bash
+# Pattern 09 v2.0 (basic scoring)
+omo-debt score --impact 9 --frequency 8 --cost 7 --stage rapid_evolution
+
+# Pattern 09 v2.1 (with honesty dimension)
+omo-debt score --impact 9 --frequency 8 --cost 7 \
+  --project-path . \
+  --enable-honesty \
+  --debt-files debt.yaml
+```
+
+### Honesty Scoring
+
+The honesty dimension evaluates debt disclosure quality across three sub-dimensions:
+
+1. **Completeness (40%)**: Coverage of all problematic areas
+2. **Consistency (35%)**: Objectivity and stability of assessments
+3. **Verifiability (25%)**: Evidence support and traceability
+
+**Priority Adjustment**:
+- High honesty (≥8.5): +15-25% boost → may upgrade priority
+- Low honesty (<4.0): -15-25% penalty → may downgrade priority
+- Neutral (5.0): no adjustment
+
+### Example Output
+
+```
+债务评分结果 (Pattern 09 v2.1)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+影响分数              9.0
+频繁度分数            8.0
+成本分数              7.0
+项目阶段              rapid_evolution
+基础分数              8.10
+归一化系数            1.0
+────────────────────────────────
+诚实度分数            7.2/10 (✅ 高)
+  - 完整性           6.8/10
+  - 一致性           7.5/10
+  - 可验证性         7.3/10
+诚实度加成            +11.0%
+调整后分数            8.99
+优先级                P0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Migration from v2.0 to v2.1
+
+**Backward Compatible**: v2.1 is fully backward compatible with v2.0.
+- Default behavior: Pattern 09 v2.0 (no honesty dimension)
+- Opt-in: Use `--enable-honesty` flag to activate v2.1
+
+No changes required to existing workflows.
+
