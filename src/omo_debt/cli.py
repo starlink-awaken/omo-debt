@@ -147,17 +147,39 @@ def score(impact: float, frequency: float, cost: float,
                 
                 console.print(f"[dim]计算诚实度分数...[/dim]")
                 
-                # 分别计算三个维度
-                completeness_result = calculate_completeness(project_path, list(debt_files) if debt_files else [])
-                consistency_result = calculate_consistency(project_path, list(debt_files) if debt_files else [])
-                verifiability_result = calculate_verifiability(list(debt_files) if debt_files else [])
+                # 1. 计算完整性（使用项目路径和债务文件列表）
+                completeness_result = calculate_completeness(
+                    project_path=project_path,
+                    debt_files=list(debt_files) if debt_files else []
+                )
                 
-                # 组合为总分
+                # 2. 计算一致性（使用当前评分作为 self_rating）
+                # 简化版：没有 peer 数据时使用默认评分
+                consistency_result = calculate_consistency(
+                    self_rating=result.normalized_score,
+                    peer_avg=None,  # 暂时没有 peer 数据
+                    historical_scores=None  # 暂时没有历史数据
+                )
+                
+                # 3. 计算可验证性（需要解析债务文件获取证据）
+                # 简化版：仅基于文件存在性
+                verifiability_result = calculate_verifiability(
+                    has_impact_evidence=bool(debt_files),
+                    has_frequency_evidence=bool(debt_files),
+                    has_cost_evidence=bool(debt_files),
+                    evidence_commits=[],
+                    evidence_issues=[],
+                    evidence_refs=list(debt_files) if debt_files else [],
+                    total_claims=3  # 默认3个声明
+                )
+                
+                # 4. 组合为总分
                 honesty_score = calculate_honesty_score(
                     completeness=completeness_result.score,
                     consistency=consistency_result.score,
                     verifiability=verifiability_result.score
                 )
+                
                 adjusted_score = adjust_score_with_honesty(
                     result.normalized_score,
                     honesty_score.score
