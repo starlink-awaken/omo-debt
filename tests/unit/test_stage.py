@@ -36,10 +36,12 @@ class TestStageIdentification:
             file_path.write_text(f"Content {i}")
             
             repo.index.add([f"file_{i}.txt"])
+            # GitPython expects date as string in format "seconds offset"
+            timestamp_str = f"{int(commit_date.timestamp())} +0000"
             repo.index.commit(
                 f"Commit {i}",
-                author_date=int(commit_date.timestamp()),
-                commit_date=int(commit_date.timestamp()),
+                author_date=timestamp_str,
+                commit_date=timestamp_str,
             )
 
         return tmpdir
