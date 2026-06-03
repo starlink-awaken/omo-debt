@@ -190,6 +190,11 @@ def compare(debt_files: tuple[str, ...], format: str):
             with open(file_path) as f:
                 debt_data = yaml.safe_load(f)
                 
+                # 验证必需字段
+                if not all(k in debt_data for k in ["impact", "frequency", "cost"]):
+                    console.print(f"[yellow]⚠️  跳过 {file_path}：缺少必需字段（impact/frequency/cost）[/yellow]")
+                    continue
+                
                 # 计算评分
                 result = calculate_score_v2(
                     impact=debt_data["impact"],
