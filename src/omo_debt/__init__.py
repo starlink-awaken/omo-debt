@@ -1,11 +1,16 @@
 """
-omo-debt: Pattern 09 v2.0 implementation
-Project lifecycle stage-aware technical debt scoring CLI tool.
+omo-debt: Pattern 09 v2.1 implementation
+Project lifecycle stage-aware technical debt scoring CLI tool with honesty dimension.
 """
 
 from omo_debt.__version__ import (
     __version__,
     __version_info__,
+    __title__,
+    __description__,
+    __author__,
+    __milestone__,
+    __status__,
     PATTERN_VERSION,
     PATTERN_NAME,
     PATTERN_DESCRIPTION,
@@ -14,6 +19,11 @@ from omo_debt.__version__ import (
 __all__ = [
     "__version__",
     "__version_info__",
+    "__title__",
+    "__description__",
+    "__author__",
+    "__milestone__",
+    "__status__",
     "PATTERN_VERSION",
     "PATTERN_NAME",
     "PATTERN_DESCRIPTION",
