@@ -60,26 +60,26 @@ def identify_stage(project_path: str, months: int, verbose: bool):
         table.add_column("值", style="green")
         
         table.add_row("分析周期", f"{months} 个月")
-        table.add_row("总提交数", str(result["total_commits"]))
-        table.add_row("月均提交", f"{result['monthly_avg']:.1f}")
-        table.add_row("识别阶段", result["stage"])
-        table.add_row("置信度", result["confidence"])
+        table.add_row("总提交数", str(result.total_commits))
+        table.add_row("月均提交", f"{result.monthly_avg:.1f}")
+        table.add_row("识别阶段", result.stage)
+        table.add_row("置信度", result.confidence)
         
         console.print(table)
         
         # 显示推荐权重
-        weights = result["weights"]
+        weights = get_stage_weights(result.stage)
+        norm_factor = get_normalization_factor(result.stage)
         panel_content = f"""
 [bold]推荐配置：[/bold]
-• 权重比例：影响 {weights['impact']:.2f} / 频繁度 {weights['frequency']:.2f} / 成本 {weights['cost']:.2f}
-• 归一化系数：{result['normalization_factor']:.1f}
-• 使用建议：{result.get('recommendation', '无')}
+• 权重比例：影响 {weights[0]:.2f} / 频繁度 {weights[1]:.2f} / 成本 {weights[2]:.2f}
+• 归一化系数：{norm_factor:.1f}
+• 使用建议：{result.recommendation()}
         """
         console.print(Panel(panel_content.strip(), title="[bold green]评分配置[/bold green]"))
         
         if verbose:
             console.print(f"\n[dim]项目路径：{path}[/dim]")
-            console.print(f"[dim]数据范围：{result.get('start_date', 'N/A')} ~ {result.get('end_date', 'N/A')}[/dim]")
         
     except Exception as e:
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
@@ -111,7 +111,7 @@ def score(impact: float, frequency: float, cost: float,
         if project_path and not stage:
             console.print(f"[dim]自动检测项目阶段...[/dim]")
             stage_info = identify_project_stage(project_path)
-            stage = stage_info["stage"]
+            stage = stage_info.stage
             console.print(f"[dim]检测到阶段：{stage}[/dim]\n")
         
         # 计算分数
@@ -130,20 +130,20 @@ def score(impact: float, frequency: float, cost: float,
         table.add_row("影响分数", f"{impact:.1f}")
         table.add_row("频繁度分数", f"{frequency:.1f}")
         table.add_row("成本分数", f"{cost:.1f}")
-        table.add_row("项目阶段", result.get("stage", "N/A"))
-        table.add_row("基础分数", f"{result['base_score']:.2f}")
-        table.add_row("归一化系数", f"{result['normalization_factor']:.1f}")
-        table.add_row("最终分数", f"[bold]{result['normalized_score']:.2f}[/bold]")
+        table.add_row("项目阶段", result.stage or "N/A")
+        table.add_row("基础分数", f"{result.base_score:.2f}")
+        table.add_row("归一化系数", f"{result.normalization_factor:.1f}")
+        table.add_row("最终分数", f"[bold]{result.normalized_score:.2f}[/bold]")
         
         # 优先级颜色
-        priority = result["priority"]
+        priority = result.priority
         priority_color = {"P0": "red", "P1": "yellow", "P2": "green"}.get(priority, "white")
         table.add_row("优先级", f"[bold {priority_color}]{priority}[/bold {priority_color}]")
         
         console.print(table)
         
         # 显示建议
-        recommendation = result.get("recommendation", "")
+        recommendation = result.recommendation
         if recommendation:
             console.print(Panel(recommendation, title="[bold green]建议[/bold green]"))
         
