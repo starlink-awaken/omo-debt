@@ -1,6 +1,6 @@
 [project]
 name = "omo-debt"
-version = "0.1.0"
+version = "0.2.0"
 description = "Pattern 09 v2.0: Project lifecycle stage-aware technical debt scoring CLI tool"
 readme = "README.md"
 requires-python = ">=3.10"

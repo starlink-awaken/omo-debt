@@ -107,3 +107,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 **Created as part of OMO v2.0 → v3.0 evolution roadmap.**
+
+## [0.2.0] - 2026-06-03
+
+### Added - 4P3V1L1H Framework Integration
+
+**Pattern 09 v2.1 升级：诚实度（Honesty）维度**
+
+- **核心算法**：
+  - 三维度模型：完整性(40%) + 一致性(35%) + 可验证性(25%)
+  - 诚实度评分公式：`honesty = 0.40×completeness + 0.35×consistency + 0.25×verifiability`
+  - 诚实度加成：`adjusted_score = base_score × (1 + (honesty-5)/20)`
+  - 优先级降级规则：低诚实度债务自动降级
+
+- **CLI 命令**：
+  - 新增 `assess-honesty` 命令：诚实度维度评估
+  - 支持多种输出格式（table/json/yaml）
+  - 自动检测证据完整性
+
+- **数据模型**：
+  - 扩展债务 YAML 格式支持 `honesty` 字段
+  - 包含完整性、一致性、可验证性子维度
+  - 证据链接（commits/issues/references）
+
+- **测试覆盖**：
+  - 25 个单元测试（100% 通过）
+  - 87% 代码覆盖率
+  - 核心模块 93% 覆盖率
+
+### Changed
+
+- Pattern 09 v2.0 → v2.1 升级
+- 4P3V1L → 4P3V1L1H 框架集成
+
+### Technical Details
+
+**完整性（Completeness）检测**：
+- 代码覆盖率对比（问题文件 vs 债务清单）
+- 关键区域覆盖（核心/安全/性能）
+- 历史问题覆盖（披露 vs 隐藏）
+
+**一致性（Consistency）检测**：
+- 评分偏差检测（vs 同类债务平均分）
+- 时间一致性（评分波动监控）
+- 跨项目一致性（类似债务对比）
+
+**可验证性（Verifiability）检测**：
+- 证据完整性（影响/频率/成本三维证据）
+- 数据溯源（commit/issue/doc 引用）
+
+**影响范围**：
+- 894 行核心代码
+- 325 行测试代码
+- 1 个新 CLI 命令
+- 扩展 YAML 数据模型
+

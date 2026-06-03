@@ -118,3 +118,138 @@ MIT License
 
 **Created as M3 milestone deliverable (2026-06-03)**
 
+
+## Pattern 09 v2.1: Honesty Dimension (4P3V1L1H)
+
+### Overview
+
+Version 0.2.0 introduces the **Honesty dimension** to Pattern 09, extending the framework from 4P3V1L to **4P3V1L1H**:
+
+- **4P**: Four Planes (Control/Truth/Knowledge/Delivery)
+- **3V**: Three Dimensions (Value/Velocity/Visibility)
+- **1L**: One Layer (Layered Architecture)
+- **1H**: One Honesty dimension (NEW)
+
+### Honesty Scoring
+
+The Honesty dimension measures the quality of technical debt disclosure across three sub-dimensions:
+
+| Sub-dimension | Weight | Description |
+|---------------|--------|-------------|
+| **Completeness** | 40% | Coverage of debt disclosure (code/areas/history) |
+| **Consistency** | 35% | Objectivity and stability of assessments |
+| **Verifiability** | 25% | Evidence support and data traceability |
+
+**Formula**:
+```
+honesty_score = 0.40 × completeness + 0.35 × consistency + 0.25 × verifiability
+
+adjusted_score = base_score × (1 + honesty_bonus)
+where honesty_bonus = (honesty_score - 5) / 20
+```
+
+**Impact**:
+- Honesty = 10 → +25% priority boost (excellent disclosure)
+- Honesty = 5 → No change (average)
+- Honesty = 0 → -25% penalty (poor disclosure)
+
+### CLI Usage
+
+#### Assess Honesty Dimension
+
+```bash
+# Basic assessment
+omo-debt assess-honesty \
+  --debt-files src/main.py \
+  --disclosed-issues "#42" "#58"
+
+# Full assessment with evidence
+omo-debt assess-honesty \
+  --debt-files src/auth.py --debt-files src/session.py \
+  --disclosed-issues "#1" "#2" \
+  --description "Authentication module has security vulnerabilities" \
+  --evidence-commits abc123 \
+  --evidence-issues "#1" \
+  --peer-avg 7.5 \
+  --output table
+```
+
+#### Output Formats
+
+```bash
+# Rich table output (default)
+omo-debt assess-honesty ... --output table
+
+# JSON output
+omo-debt assess-honesty ... --output json
+
+# YAML output
+omo-debt assess-honesty ... --output yaml
+```
+
+### YAML Format with Honesty
+
+```yaml
+id: DEBT-001
+title: Example debt
+impact: 9
+frequency: 8
+cost: 7
+
+# Honesty dimension (Pattern 09 v2.1)
+honesty:
+  score: 8.2
+  completeness: 8.5
+  consistency: 7.8
+  verifiability: 8.5
+  
+  evidence:
+    commits: [abc123, def456]
+    issues: ["#42", "#58"]
+    references: [docs/arch.md]
+  
+  assessed_at: "2026-06-03T15:00:00Z"
+
+# Adjusted scoring
+base_score: 7.73
+honesty_adjusted_score: 8.23  # Boosted by +6.5% due to high honesty
+```
+
+### Priority Adjustment Rules
+
+Pattern 09 v2.1 introduces honesty-based priority adjustment:
+
+| Base Priority | Honesty Score | Action |
+|---------------|---------------|--------|
+| P0 (≥7.0) | < 6.0 | ⚠️ Downgrade to P1 (low confidence) |
+| P1 (≥5.0) | < 4.0 | ⚠️ Downgrade to P2 (questionable) |
+| P2 (< 5.0) | ≥ 8.0 | ✅ Potential upgrade (well-documented) |
+
+### Benefits
+
+1. **Prevents Priority Inflation**: Low-honesty debts are automatically downgraded
+2. **Rewards Transparency**: Well-documented debts receive priority boost
+3. **Objective Assessment**: Automated evidence detection reduces bias
+4. **Continuous Improvement**: Tracks disclosure quality over time
+
+### Migration Guide
+
+**Backward Compatibility**: Honesty assessment is **opt-in** by default. Existing v2.0 workflows continue unchanged.
+
+To enable honesty dimension:
+
+```bash
+# Option 1: Explicit flag
+omo-debt score --impact 9 --frequency 8 --cost 7 --enable-honesty
+
+# Option 2: Use assess-honesty command
+omo-debt assess-honesty --debt-files ...
+```
+
+### Technical Details
+
+For detailed algorithm design, see:
+- Design document: [session files]/honesty-dimension-design.md
+- Source code: `src/omo_debt/honesty/`
+- Unit tests: `tests/unit/test_honesty.py` (25 tests, 100% pass rate)
+
