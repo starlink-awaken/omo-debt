@@ -94,17 +94,27 @@ def identify_stage(project_path: str, months: int, verbose: bool):
               help="项目阶段（可选，不指定则自动检测）")
 @click.option("--project-path", type=click.Path(exists=True), 
               help="项目路径（用于自动检测阶段）")
+@click.option("--enable-honesty/--no-honesty", default=False,
+              help="启用诚实度评估 (Pattern 09 v2.1)")
+@click.option("--debt-files", multiple=True, type=click.Path(exists=True),
+              help="债务清单文件路径（用于诚实度评估）")
 def score(impact: float, frequency: float, cost: float, 
-          stage: Optional[str], project_path: Optional[str]):
+          stage: Optional[str], project_path: Optional[str],
+          enable_honesty: bool, debt_files: tuple[str, ...]):
     """
     计算技术债务加权分数
     
-    使用 Pattern 09 v2.0 算法，根据项目阶段动态调整权重。
+    使用 Pattern 09 v2.0/v2.1 算法，根据项目阶段动态调整权重。
+    v2.1 新增：诚实度维度，评估债务披露质量。
     
     示例：
+        # Pattern 09 v2.0 (基础评分)
         omo-debt score --impact 9 --frequency 8 --cost 7
         omo-debt score --impact 9 --frequency 8 --cost 7 --stage rapid_evolution
-        omo-debt score --impact 9 --frequency 8 --cost 7 --project-path .
+        
+        # Pattern 09 v2.1 (含诚实度)
+        omo-debt score --impact 9 --frequency 8 --cost 7 --enable-honesty \\
+          --project-path . --debt-files debt.yaml
     """
     try:
         # 自动检测阶段（如果提供了项目路径）
@@ -114,7 +124,7 @@ def score(impact: float, frequency: float, cost: float,
             stage = stage_info.stage
             console.print(f"[dim]检测到阶段：{stage}[/dim]\n")
         
-        # 计算分数
+        # 计算基础分数
         result = calculate_score_v2(
             impact=impact,
             frequency=frequency, 
@@ -122,8 +132,41 @@ def score(impact: float, frequency: float, cost: float,
             stage=stage
         )
         
+        # 诚实度评估 (Pattern 09 v2.1)
+        honesty_score = None
+        adjusted_score = result.normalized_score
+        
+        if enable_honesty:
+            if not project_path:
+                console.print("[yellow]⚠️  警告：诚实度评估需要 --project-path 参数，跳过[/yellow]\n")
+            else:
+                from omo_debt.honesty.completeness import calculate_completeness
+                from omo_debt.honesty.consistency import calculate_consistency
+                from omo_debt.honesty.verifiability import calculate_verifiability
+                from omo_debt.honesty.core import calculate_honesty_score, adjust_score_with_honesty
+                
+                console.print(f"[dim]计算诚实度分数...[/dim]")
+                
+                # 分别计算三个维度
+                completeness_result = calculate_completeness(project_path, list(debt_files) if debt_files else [])
+                consistency_result = calculate_consistency(project_path, list(debt_files) if debt_files else [])
+                verifiability_result = calculate_verifiability(list(debt_files) if debt_files else [])
+                
+                # 组合为总分
+                honesty_score = calculate_honesty_score(
+                    completeness=completeness_result.score,
+                    consistency=consistency_result.score,
+                    verifiability=verifiability_result.score
+                )
+                adjusted_score = adjust_score_with_honesty(
+                    result.normalized_score,
+                    honesty_score.score
+                )
+                console.print(f"[dim]诚实度：{honesty_score.score:.1f}/10[/dim]\n")
+        
         # 显示结果
-        table = Table(title="债务评分结果", show_header=True, header_style="bold magenta")
+        title = "债务评分结果 (Pattern 09 v2.1)" if enable_honesty else "债务评分结果 (Pattern 09 v2.0)"
+        table = Table(title=title, show_header=True, header_style="bold magenta")
         table.add_column("指标", style="cyan", width=20)
         table.add_column("值", style="green")
         
@@ -133,27 +176,80 @@ def score(impact: float, frequency: float, cost: float,
         table.add_row("项目阶段", result.stage or "N/A")
         table.add_row("基础分数", f"{result.base_score:.2f}")
         table.add_row("归一化系数", f"{result.normalization_factor:.1f}")
-        table.add_row("最终分数", f"[bold]{result.normalized_score:.2f}[/bold]")
         
-        # 优先级颜色
-        priority = result.priority
-        priority_color = {"P0": "red", "P1": "yellow", "P2": "green"}.get(priority, "white")
+        # v2.1: 诚实度信息
+        if enable_honesty and honesty_score:
+            table.add_row("─" * 20, "─" * 20)
+            
+            # 诚实度状态标识
+            if honesty_score.score >= 8.5:
+                status = "✅ 极高"
+                status_color = "bright_green"
+            elif honesty_score.score >= 7.0:
+                status = "✅ 高"
+                status_color = "green"
+            elif honesty_score.score >= 5.0:
+                status = "⚠️ 中等"
+                status_color = "yellow"
+            elif honesty_score.score >= 3.0:
+                status = "⚠️ 低"
+                status_color = "orange1"
+            else:
+                status = "❌ 极低"
+                status_color = "red"
+            
+            table.add_row("诚实度分数", f"[{status_color}]{honesty_score.score:.1f}/10 ({status})[/{status_color}]")
+            table.add_row("  - 完整性", f"{honesty_score.completeness:.1f}/10")
+            table.add_row("  - 一致性", f"{honesty_score.consistency:.1f}/10")
+            table.add_row("  - 可验证性", f"{honesty_score.verifiability:.1f}/10")
+            
+            bonus = ((honesty_score.score - 5.0) / 20.0) * 100
+            bonus_str = f"+{bonus:.1f}%" if bonus > 0 else f"{bonus:.1f}%"
+            table.add_row("诚实度加成", bonus_str)
+            table.add_row("调整后分数", f"[bold]{adjusted_score:.2f}[/bold]")
+        else:
+            table.add_row("最终分数", f"[bold]{result.normalized_score:.2f}[/bold]")
+        
+        # 优先级 (基于调整后分数重新计算)
+        if adjusted_score >= 8.5:
+            priority = "P0"
+            priority_color = "red"
+        elif adjusted_score >= 6.5:
+            priority = "P1"
+            priority_color = "yellow"
+        else:
+            priority = "P2"
+            priority_color = "green"
+        
         table.add_row("优先级", f"[bold {priority_color}]{priority}[/bold {priority_color}]")
         
         console.print(table)
         
-        # 显示建议 (DebtScore 没有 recommendation 字段，根据 priority 生成建议)
-        if result.priority == "P0":
+        # 显示建议
+        if priority == "P0":
             recommendation = "🔴 极高优先级债务，建议立即安排资源处理"
-        elif result.priority == "P1":
+        elif priority == "P1":
             recommendation = "🟡 高优先级债务，建议本迭代内处理"
         else:
             recommendation = "🟢 中等优先级债务，可适当延后处理"
         
-        console.print(Panel(recommendation, title="[bold green]建议[/bold green]"))
+        if enable_honesty and honesty_score:
+            if honesty_score.score < 5.0:
+                recommendation += "\n\n⚠️  诚实度评分较低，建议：\n"
+                if honesty_score.completeness < 5.0:
+                    recommendation += "  • 补充完整的债务清单（覆盖所有问题文件）\n"
+                if honesty_score.consistency < 5.0:
+                    recommendation += "  • 检查评分一致性（避免主观偏差）\n"
+                if honesty_score.verifiability < 5.0:
+                    recommendation += "  • 增加可验证证据（代码引用、issue链接、测试案例）"
+        
+        console.print(Panel(recommendation.strip(), title="[bold green]建议[/bold green]"))
         
     except Exception as e:
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
+        import traceback
+        if "--verbose" in sys.argv:
+            traceback.print_exc()
         sys.exit(1)
 
 
