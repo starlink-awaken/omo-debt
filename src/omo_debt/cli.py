@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
-from omo_debt.core.stage import identify_project_stage
+from omo_debt.core.stage import identify_project_stage, get_stage_weights, get_normalization_factor
 from omo_debt.core.scoring import calculate_score_v2, compare_debt_scores
 
 console = Console()
@@ -67,14 +67,13 @@ def identify_stage(project_path: str, months: int, verbose: bool):
         
         console.print(table)
         
-        # 显示推荐权重
         weights = get_stage_weights(result.stage)
         norm_factor = get_normalization_factor(result.stage)
         panel_content = f"""
 [bold]推荐配置：[/bold]
 • 权重比例：影响 {weights[0]:.2f} / 频繁度 {weights[1]:.2f} / 成本 {weights[2]:.2f}
 • 归一化系数：{norm_factor:.1f}
-• 使用建议：{result.recommendation()}
+• 使用建议：{result._get_recommendation()}
         """
         console.print(Panel(panel_content.strip(), title="[bold green]评分配置[/bold green]"))
         
@@ -142,10 +141,15 @@ def score(impact: float, frequency: float, cost: float,
         
         console.print(table)
         
-        # 显示建议
-        recommendation = result.recommendation
-        if recommendation:
-            console.print(Panel(recommendation, title="[bold green]建议[/bold green]"))
+        # 显示建议 (DebtScore 没有 recommendation 字段，根据 priority 生成建议)
+        if result.priority == "P0":
+            recommendation = "🔴 极高优先级债务，建议立即安排资源处理"
+        elif result.priority == "P1":
+            recommendation = "🟡 高优先级债务，建议本迭代内处理"
+        else:
+            recommendation = "🟢 中等优先级债务，可适当延后处理"
+        
+        console.print(Panel(recommendation, title="[bold green]建议[/bold green]"))
         
     except Exception as e:
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
