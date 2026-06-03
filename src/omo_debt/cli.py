@@ -430,3 +430,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Import honesty assessment command
+try:
+    from omo_debt.cli_honesty import assess_honesty
+    cli.add_command(assess_honesty)
+except ImportError:
+    pass  # Honesty module not available
