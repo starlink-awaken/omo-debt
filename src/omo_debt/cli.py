@@ -5,6 +5,7 @@ Command-line interface for Pattern 09 v2.0 debt scoring tool.
 from __future__ import annotations
 
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -157,23 +158,123 @@ def score(impact: float, frequency: float, cost: float,
 
 
 @cli.command()
-@click.argument("debt_files", nargs=-1, type=click.Path(exists=True))
-def compare(debt_files: tuple[str, ...]):
+@click.argument("debt_files", nargs=-1, type=click.Path(exists=True), required=True)
+@click.option("--format", type=click.Choice(["table", "json", "yaml"]), default="table", 
+              help="输出格式（默认 table）")
+def compare(debt_files: tuple[str, ...], format: str):
     """
     对比多个债务项优先级
     
     读取多个债务 YAML 文件，按优先级排序输出。
     
+    债务 YAML 格式：
+        id: GBR-D01
+        title: 未实现跨表关联查询
+        impact: 9
+        frequency: 8
+        cost: 7
+        stage: rapid_evolution  # 可选，不指定则使用 project_path 自动检测
+        project: gbrain
+    
     示例：
         omo-debt compare debt1.yaml debt2.yaml debt3.yaml
+        omo-debt compare debts/*.yaml --format json
     """
-    console.print("[bold yellow]compare 命令开发中...[/bold yellow]")
-    console.print(f"待对比文件：{list(debt_files)}")
+    try:
+        import yaml
+        from pathlib import Path
+        
+        # 读取所有债务文件
+        debts = []
+        for file_path in debt_files:
+            with open(file_path) as f:
+                debt_data = yaml.safe_load(f)
+                
+                # 计算评分
+                result = calculate_score_v2(
+                    impact=debt_data["impact"],
+                    frequency=debt_data["frequency"],
+                    cost=debt_data["cost"],
+                    stage=debt_data.get("stage")
+                )
+                
+                debts.append({
+                    "id": debt_data.get("id", Path(file_path).stem),
+                    "title": debt_data.get("title", "未命名债务"),
+                    "project": debt_data.get("project", "unknown"),
+                    "stage": result.stage or "N/A",
+                    "impact": debt_data["impact"],
+                    "frequency": debt_data["frequency"],
+                    "cost": debt_data["cost"],
+                    "score": result.normalized_score,
+                    "priority": result.priority,
+                    "file": file_path
+                })
+        
+        # 按优先级和分数排序
+        debts.sort(key=lambda d: (
+            {"P0": 0, "P1": 1, "P2": 2}[d["priority"]],
+            -d["score"]
+        ))
+        
+        # 输出结果
+        if format == "table":
+            table = Table(title=f"债务对比结果（共 {len(debts)} 项）", 
+                         show_header=True, header_style="bold magenta")
+            table.add_column("#", style="dim", width=4)
+            table.add_column("ID", style="cyan", width=12)
+            table.add_column("项目", style="blue", width=12)
+            table.add_column("标题", style="white", width=30)
+            table.add_column("阶段", style="yellow", width=16)
+            table.add_column("分数", style="green", width=8)
+            table.add_column("优先级", width=8)
+            
+            for i, debt in enumerate(debts, 1):
+                priority_color = {"P0": "red", "P1": "yellow", "P2": "green"}[debt["priority"]]
+                table.add_row(
+                    str(i),
+                    debt["id"],
+                    debt["project"],
+                    debt["title"][:28] + "..." if len(debt["title"]) > 28 else debt["title"],
+                    debt["stage"],
+                    f"{debt['score']:.2f}",
+                    f"[{priority_color}]{debt['priority']}[/{priority_color}]"
+                )
+            
+            console.print(table)
+            
+            # 统计信息
+            p0_count = sum(1 for d in debts if d["priority"] == "P0")
+            p1_count = sum(1 for d in debts if d["priority"] == "P1")
+            p2_count = sum(1 for d in debts if d["priority"] == "P2")
+            
+            stats = f"""
+[bold]优先级分布：[/bold]
+• P0（极高优先级）：{p0_count} 项
+• P1（高优先级）：{p1_count} 项
+• P2（中等优先级）：{p2_count} 项
+            """
+            console.print(Panel(stats.strip(), title="[bold green]统计信息[/bold green]"))
+            
+        elif format == "json":
+            import json
+            console.print(json.dumps(debts, indent=2, ensure_ascii=False))
+            
+        elif format == "yaml":
+            import yaml
+            console.print(yaml.dump(debts, allow_unicode=True, default_flow_style=False))
+        
+    except Exception as e:
+        console.print(f"[bold red]错误：[/bold red]{e}", style="red")
+        sys.exit(1)
 
 
 @cli.command()
 @click.argument("project_path", type=click.Path(exists=True))
-def analyze(project_path: str):
+@click.option("--debt-file", type=click.Path(exists=True), 
+              help="债务清单文件（YAML，包含 debts 列表）")
+@click.option("--output", type=click.Path(), help="输出报告文件路径")
+def analyze(project_path: str, debt_file: str | None, output: str | None):
     """
     分析项目债务健康度
     
@@ -181,9 +282,140 @@ def analyze(project_path: str):
     
     示例：
         omo-debt analyze /path/to/project
+        omo-debt analyze . --debt-file debts.yaml
+        omo-debt analyze . --debt-file debts.yaml --output report.md
     """
-    console.print("[bold yellow]analyze 命令开发中...[/bold yellow]")
-    console.print(f"待分析项目：{project_path}")
+    try:
+        from pathlib import Path
+        
+        path = Path(project_path).resolve()
+        console.print(f"\n[bold cyan]分析项目：[/bold cyan]{path}")
+        
+        # 1. 识别项目阶段
+        stage_info = identify_project_stage(str(path))
+        console.print(f"[dim]项目阶段：{stage_info.stage}（月均 {stage_info.monthly_avg:.1f} 次提交）[/dim]")
+        
+        # 2. 读取债务清单
+        debts = []
+        if debt_file:
+            import yaml
+            with open(debt_file) as f:
+                data = yaml.safe_load(f)
+                debt_list = data.get("debts", []) if isinstance(data, dict) else data
+                
+                for debt_data in debt_list:
+                    result = calculate_score_v2(
+                        impact=debt_data["impact"],
+                        frequency=debt_data["frequency"],
+                        cost=debt_data["cost"],
+                        stage=debt_data.get("stage") or stage_info.stage
+                    )
+                    
+                    debts.append({
+                        "id": debt_data.get("id", "未知"),
+                        "title": debt_data.get("title", "未命名"),
+                        "score": result.normalized_score,
+                        "priority": result.priority
+                    })
+        
+        # 3. 生成报告
+        if debts:
+            # 按优先级分组
+            p0_debts = [d for d in debts if d["priority"] == "P0"]
+            p1_debts = [d for d in debts if d["priority"] == "P1"]
+            p2_debts = [d for d in debts if d["priority"] == "P2"]
+            
+            # 计算健康度分数（100 - 加权债务影响）
+            health_score = max(0, 100 - (len(p0_debts) * 15 + len(p1_debts) * 8 + len(p2_debts) * 3))
+            
+            # 显示结果
+            table = Table(title="项目债务健康报告", show_header=True, header_style="bold magenta")
+            table.add_column("指标", style="cyan", width=20)
+            table.add_column("值", style="green")
+            
+            table.add_row("项目路径", str(path))
+            table.add_row("生命周期阶段", stage_info.stage)
+            table.add_row("月均提交数", f"{stage_info.monthly_avg:.1f}")
+            table.add_row("债务总数", str(len(debts)))
+            table.add_row("P0（极高优先级）", str(len(p0_debts)))
+            table.add_row("P1（高优先级）", str(len(p1_debts)))
+            table.add_row("P2（中等优先级）", str(len(p2_debts)))
+            
+            # 健康度评级
+            if health_score >= 80:
+                health_grade = "🟢 优秀"
+            elif health_score >= 60:
+                health_grade = "🟡 良好"
+            elif health_score >= 40:
+                health_grade = "🟠 一般"
+            else:
+                health_grade = "🔴 需改进"
+            
+            table.add_row("健康度分数", f"{health_score}/100")
+            table.add_row("健康度评级", health_grade)
+            
+            console.print(table)
+            
+            # 建议
+            recommendations = []
+            if len(p0_debts) > 0:
+                recommendations.append(f"• {len(p0_debts)} 个 P0 债务需要立即处理")
+            if len(p1_debts) > 3:
+                recommendations.append(f"• {len(p1_debts)} 个 P1 债务较多，建议本迭代优先处理 3-5 个")
+            if health_score < 60:
+                recommendations.append("• 总体健康度较低，建议制定系统性还债计划")
+            
+            if recommendations:
+                console.print(Panel("\n".join(recommendations), 
+                                   title="[bold yellow]改进建议[/bold yellow]"))
+            
+            # 输出报告文件
+            if output:
+                report_content = f"""# 项目债务健康报告
+
+**项目路径**：{path}  
+**生命周期阶段**：{stage_info.stage}  
+**月均提交数**：{stage_info.monthly_avg:.1f}  
+**分析时间**：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+## 债务概览
+
+- **债务总数**：{len(debts)}
+- **P0（极高优先级）**：{len(p0_debts)}
+- **P1（高优先级）**：{len(p1_debts)}
+- **P2（中等优先级）**：{len(p2_debts)}
+
+## 健康度评估
+
+- **健康度分数**：{health_score}/100
+- **健康度评级**：{health_grade}
+
+## 改进建议
+
+{"".join(f"{r}\n" for r in recommendations)}
+
+## 债务清单
+
+### P0 债务（极高优先级）
+
+{"".join(f"- [{d['id']}] {d['title']} (分数: {d['score']:.2f})\n" for d in p0_debts) if p0_debts else "无\n"}
+
+### P1 债务（高优先级）
+
+{"".join(f"- [{d['id']}] {d['title']} (分数: {d['score']:.2f})\n" for d in p1_debts) if p1_debts else "无\n"}
+
+### P2 债务（中等优先级）
+
+{"".join(f"- [{d['id']}] {d['title']} (分数: {d['score']:.2f})\n" for d in p2_debts) if p2_debts else "无\n"}
+"""
+                Path(output).write_text(report_content)
+                console.print(f"\n[green]✓[/green] 报告已保存到：{output}")
+        else:
+            console.print("[yellow]未找到债务清单，请使用 --debt-file 指定债务文件[/yellow]")
+            
+    except Exception as e:
+        console.print(f"[bold red]错误：[/bold red]{e}", style="red")
+        sys.exit(1)
 
 
 def main():
