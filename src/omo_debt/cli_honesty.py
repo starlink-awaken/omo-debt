@@ -4,23 +4,21 @@ CLI commands for honesty dimension assessment.
 Extends CLI with --honesty and --audit commands.
 """
 
-import os
-from pathlib import Path
 from typing import Optional
 
 import click
 from rich.console import Console
 from rich.table import Table
 
-from omo_debt.honesty.core import calculate_honesty_score, adjust_score_with_honesty
 from omo_debt.honesty.completeness import calculate_completeness
 from omo_debt.honesty.consistency import calculate_consistency
+from omo_debt.honesty.core import calculate_honesty_score
 from omo_debt.honesty.verifiability import (
     calculate_verifiability,
-    detect_impact_evidence,
-    detect_frequency_evidence,
-    detect_cost_evidence,
     count_claims,
+    detect_cost_evidence,
+    detect_frequency_evidence,
+    detect_impact_evidence,
 )
 
 console = Console()
@@ -94,11 +92,11 @@ def assess_honesty(
     output: str,
 ):
     """Assess honesty dimension of technical debt disclosure.
-    
+
     Examples:
         # Basic assessment
         omo-debt assess-honesty --debt-files src/main.py --disclosed-issues "#42"
-        
+
         # Full assessment with evidence
         omo-debt assess-honesty \\
             --debt-files src/auth.py --debt-files src/session.py \\
@@ -108,7 +106,7 @@ def assess_honesty(
             --peer-avg 7.5
     """
     console.print("[bold cyan]🔍 Assessing Honesty Dimension...[/bold cyan]\n")
-    
+
     # 1. Calculate completeness
     console.print("[dim]→ Calculating completeness...[/dim]")
     completeness_result = calculate_completeness(
@@ -116,38 +114,36 @@ def assess_honesty(
         debt_files=list(debt_files) if debt_files else None,
         disclosed_issues=list(disclosed_issues) if disclosed_issues else None,
     )
-    
+
     # 2. Calculate consistency
     console.print("[dim]→ Calculating consistency...[/dim]")
     hist_scores = None
     if historical_scores:
         hist_scores = [float(s.strip()) for s in historical_scores.split(",")]
-    
+
     # For consistency, we need a self_rating; use a placeholder if not provided
     self_rating = 7.0  # Default placeholder
-    
+
     consistency_result = calculate_consistency(
         self_rating=self_rating,
         peer_avg=peer_avg,
         historical_scores=hist_scores,
     )
-    
+
     # 3. Calculate verifiability
     console.print("[dim]→ Calculating verifiability...[/dim]")
-    
+
     has_impact_evidence = False
     has_frequency_evidence = False
     has_cost_evidence = False
     total_claims = 1
-    
+
     if description:
         has_impact_evidence = detect_impact_evidence(description, list(evidence_refs))
-        has_frequency_evidence = detect_frequency_evidence(
-            description, list(evidence_commits), list(evidence_refs)
-        )
+        has_frequency_evidence = detect_frequency_evidence(description, list(evidence_commits), list(evidence_refs))
         has_cost_evidence = detect_cost_evidence(description, list(evidence_refs))
         total_claims = count_claims(description)
-    
+
     verifiability_result = calculate_verifiability(
         has_impact_evidence=has_impact_evidence,
         has_frequency_evidence=has_frequency_evidence,
@@ -157,7 +153,7 @@ def assess_honesty(
         evidence_refs=list(evidence_refs) if evidence_refs else None,
         total_claims=total_claims,
     )
-    
+
     # 4. Calculate overall honesty
     console.print("[dim]→ Calculating overall honesty...[/dim]\n")
     honesty_result = calculate_honesty_score(
@@ -168,7 +164,7 @@ def assess_honesty(
         evidence_issues=list(evidence_issues) if evidence_issues else None,
         evidence_refs=list(evidence_refs) if evidence_refs else None,
     )
-    
+
     # Output results
     if output == "table":
         _print_honesty_table(
@@ -179,6 +175,7 @@ def assess_honesty(
         )
     elif output == "json":
         import json
+
         result_dict = {
             "honesty": {
                 "score": honesty_result.score,
@@ -192,6 +189,7 @@ def assess_honesty(
         console.print(json.dumps(result_dict, indent=2, ensure_ascii=False))
     elif output == "yaml":
         import yaml
+
         result_dict = {
             "honesty": {
                 "score": honesty_result.score,
@@ -207,14 +205,14 @@ def assess_honesty(
 
 def _print_honesty_table(honesty, completeness, consistency, verifiability):
     """Print honesty assessment results as rich table."""
-    
+
     # Main summary table
     table = Table(title="📊 Honesty Assessment Results", show_header=True, header_style="bold magenta")
     table.add_column("Dimension", style="cyan", width=20)
     table.add_column("Score", justify="right", style="green", width=10)
     table.add_column("Grade", justify="center", width=10)
     table.add_column("Details", style="dim", width=40)
-    
+
     # Overall honesty
     grade_color = _get_grade_color(honesty.grade)
     table.add_row(
@@ -223,9 +221,9 @@ def _print_honesty_table(honesty, completeness, consistency, verifiability):
         f"[{grade_color}]{honesty.grade}[/{grade_color}]",
         f"Bonus: {honesty.bonus:+.2%} (priority adjustment)",
     )
-    
+
     table.add_section()
-    
+
     # Completeness
     table.add_row(
         "Completeness (40%)",
@@ -233,7 +231,7 @@ def _print_honesty_table(honesty, completeness, consistency, verifiability):
         "",
         f"{completeness.debt_files_count} debt files, {completeness.disclosed_issues} disclosed issues",
     )
-    
+
     # Consistency
     table.add_row(
         "Consistency (35%)",
@@ -241,17 +239,29 @@ def _print_honesty_table(honesty, completeness, consistency, verifiability):
         "",
         f"Volatility: {consistency.score_volatility:.2f}, Peer avg: {consistency.peer_avg or 'N/A'}",
     )
-    
+
     # Verifiability
+    evidence_count = sum(
+        [
+            verifiability.has_impact_evidence,
+            verifiability.has_frequency_evidence,
+            verifiability.has_cost_evidence,
+        ]
+    )
+    refs_count = (
+        verifiability.referenced_commits
+        + verifiability.referenced_issues
+        + verifiability.referenced_docs
+    )
     table.add_row(
         "Verifiability (25%)",
         f"{verifiability.score:.2f}",
         "",
-        f"Evidence: {sum([verifiability.has_impact_evidence, verifiability.has_frequency_evidence, verifiability.has_cost_evidence])}/3, Refs: {verifiability.referenced_commits + verifiability.referenced_issues + verifiability.referenced_docs}",
+        f"Evidence: {evidence_count}/3, Refs: {refs_count}",
     )
-    
+
     console.print(table)
-    
+
     # Interpretation
     console.print()
     if honesty.score >= 8.5:

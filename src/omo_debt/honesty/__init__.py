@@ -11,8 +11,8 @@ Sub-dimensions:
 
 from omo_debt.honesty.completeness import calculate_completeness
 from omo_debt.honesty.consistency import calculate_consistency
-from omo_debt.honesty.verifiability import calculate_verifiability
 from omo_debt.honesty.core import calculate_honesty_score
+from omo_debt.honesty.verifiability import calculate_verifiability
 
 __all__ = [
     "calculate_completeness",

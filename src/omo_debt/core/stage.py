@@ -12,7 +12,6 @@ from typing import Literal
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
-
 StageType = Literal["rapid_evolution", "stable_growth", "maintenance"]
 ConfidenceType = Literal["high", "medium", "low"]
 
@@ -116,7 +115,7 @@ def identify_project_stage(
     # Get commits in date range
     try:
         commits = list(repo.iter_commits(since=start_date.isoformat(), until=end_date.isoformat()))
-    except GitCommandError as e:
+    except GitCommandError:
         # Handle empty repository or no commits in range
         commits = []
 

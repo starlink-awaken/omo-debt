@@ -2,7 +2,7 @@
 
 import pytest
 
-from omo_debt.core.scoring import DebtScore, calculate_score_v2, compare_debt_scores
+from omo_debt.core.scoring import calculate_score_v2, compare_debt_scores
 
 
 class TestCalculateScoreV2:
@@ -11,16 +11,16 @@ class TestCalculateScoreV2:
     def test_rapid_evolution_high_impact_high_freq(self):
         """Test rapid evolution: high impact, high frequency (gbrain GBR-D01)."""
         score = calculate_score_v2(impact=9, frequency=8, cost=7, stage="rapid_evolution")
-        
+
         assert score.stage == "rapid_evolution"
-        assert abs(score.base_score - 8.05) < 0.01  # 9*0.35 + 8*0.40 + 7*0.25 = 8.05
-        assert abs(score.normalized_score - 8.05) < 0.01  # 8.05 * 1.0 = 8.05
+        assert abs(score.base_score - 8.1) < 0.01  # 9*0.35 + 8*0.40 + 7*0.25 = 8.10
+        assert abs(score.normalized_score - 8.1) < 0.01  # 8.10 * 1.0 = 8.10
         assert score.priority == "P0"  # >= 7.0
 
     def test_stable_growth_high_impact_low_freq(self):
         """Test stable growth: high impact, low frequency (omostation SB_DECOMPOSITION)."""
-        score = calculate_score_v2(impact=9, frequency=1, cost=8, stage="stable_growth")
-        
+        calculate_score_v2(impact=9, frequency=1, cost=8, stage="stable_growth")
+
         # v1.1 (stable_growth weights): 9*0.40 + 1*0.30 + 8*0.30 = 6.30 + 0.30 + 2.40 = 6.0? No wait:
         # Actual: 9*0.40 + 1*0.30 + 8*0.30 = 3.6 + 0.3 + 2.4 = 6.3
         # Wait, let me recalculate from memory doc: impact 9, frequency 1.3 (Git calibrated), cost 8
@@ -37,7 +37,7 @@ class TestCalculateScoreV2:
         # v1.1: 6.39, v2.0 normalized: 7.03 (P0)
         impact, freq, cost = 9, 1, 8  # Using integer approximation
         score = calculate_score_v2(impact=impact, frequency=freq, cost=cost, stage="stable_growth")
-        
+
         # Base: 9*0.40 + 1*0.30 + 8*0.30 = 3.6 + 0.3 + 2.4 = 6.3
         # Normalized: 6.3 * 1.1 = 6.93
         assert abs(score.base_score - 6.3) < 0.01
@@ -49,7 +49,7 @@ class TestCalculateScoreV2:
         # From validation: impact 9, freq 1, cost 8
         # v1.1: 6.0, v2.0 normalized: 7.2 (P0)
         score = calculate_score_v2(impact=9, frequency=1, cost=8, stage="maintenance")
-        
+
         # Base: 9*0.50 + 1*0.20 + 8*0.30 = 4.5 + 0.2 + 2.4 = 7.1? No:
         # 9*0.50 = 4.5, 1*0.20 = 0.2, 8*0.30 = 2.4, sum = 7.1
         # Normalized: 7.1 * 1.2 = 8.52
@@ -62,7 +62,7 @@ class TestCalculateScoreV2:
         # So base might be 5.9, normalized 5.9 * 1.2 = 7.08
         # Let me use a simpler test case
         score = calculate_score_v2(impact=9, frequency=1, cost=8, stage="maintenance")
-        
+
         # Base: 9*0.50 + 1*0.20 + 8*0.30 = 4.5 + 0.2 + 2.4 = 7.1
         # Normalized: 7.1 * 1.2 = 8.52
         assert 7.0 < score.base_score < 7.2
@@ -94,11 +94,11 @@ class TestCalculateScoreV2:
     def test_normalization_effect(self):
         """Test normalization factor effect across stages."""
         impact, freq, cost = 7, 7, 7
-        
+
         rapid_score = calculate_score_v2(impact, freq, cost, "rapid_evolution")
         stable_score = calculate_score_v2(impact, freq, cost, "stable_growth")
         maint_score = calculate_score_v2(impact, freq, cost, "maintenance")
-        
+
         # Same inputs, different stages
         assert rapid_score.base_score == stable_score.base_score  # Same weights in this case? No.
         # Actually weights differ, so base_score differs. Let me fix:
@@ -109,7 +109,7 @@ class TestCalculateScoreV2:
         assert abs(rapid_score.base_score - 7.0) < 0.01
         assert abs(stable_score.base_score - 7.0) < 0.01
         assert abs(maint_score.base_score - 7.0) < 0.01
-        
+
         # Normalized scores differ due to factors
         assert abs(rapid_score.normalized_score - 7.0) < 0.01  # 7.0 * 1.0
         assert abs(stable_score.normalized_score - 7.7) < 0.01  # 7.0 * 1.1
@@ -120,7 +120,7 @@ class TestCalculateScoreV2:
         # High frequency should have more impact in rapid evolution
         high_freq = calculate_score_v2(impact=5, frequency=9, cost=5, stage="rapid_evolution")
         high_impact = calculate_score_v2(impact=9, frequency=5, cost=5, stage="rapid_evolution")
-        
+
         # rapid weights: impact 0.35, freq 0.40, cost 0.25
         # high_freq: 5*0.35 + 9*0.40 + 5*0.25 = 1.75 + 3.6 + 1.25 = 6.6
         # high_impact: 9*0.35 + 5*0.40 + 5*0.25 = 3.15 + 2.0 + 1.25 = 6.4
@@ -131,7 +131,7 @@ class TestCalculateScoreV2:
         # High impact should have more weight in maintenance
         high_impact = calculate_score_v2(impact=9, frequency=5, cost=5, stage="maintenance")
         high_freq = calculate_score_v2(impact=5, frequency=9, cost=5, stage="maintenance")
-        
+
         # maint weights: impact 0.50, freq 0.20, cost 0.30
         # high_impact: 9*0.50 + 5*0.20 + 5*0.30 = 4.5 + 1.0 + 1.5 = 7.0
         # high_freq: 5*0.50 + 9*0.20 + 5*0.30 = 2.5 + 1.8 + 1.5 = 5.8
@@ -141,7 +141,7 @@ class TestCalculateScoreV2:
         """Test input validation for impact score."""
         with pytest.raises(ValueError, match="impact must be in range"):
             calculate_score_v2(impact=0, frequency=5, cost=5, stage="rapid_evolution")
-        
+
         with pytest.raises(ValueError, match="impact must be in range"):
             calculate_score_v2(impact=11, frequency=5, cost=5, stage="rapid_evolution")
 
@@ -159,7 +159,7 @@ class TestCalculateScoreV2:
         """Test DebtScore.to_dict() method."""
         score = calculate_score_v2(impact=9, frequency=8, cost=7, stage="rapid_evolution")
         result = score.to_dict()
-        
+
         assert "debt_item" in result
         assert "project_stage" in result
         assert "weights" in result
@@ -180,9 +180,9 @@ class TestCompareDebtScores:
             calculate_score_v2(7, 8, 5, "rapid_evolution"),  # P1, ~5.7
             calculate_score_v2(8, 3, 6, "rapid_evolution"),  # P1, ~5.15
         ]
-        
+
         sorted_scores = compare_debt_scores(scores)
-        
+
         # P0 should be first
         assert sorted_scores[0].priority == "P0"
         # P1s sorted by score (descending)
@@ -196,9 +196,9 @@ class TestCompareDebtScores:
             calculate_score_v2(7, 6, 5, "rapid_evolution"),  # P1
             calculate_score_v2(5, 7, 6, "rapid_evolution"),  # P1
         ]
-        
+
         sorted_scores = compare_debt_scores(scores)
-        
+
         # Should be sorted by normalized_score (descending)
         assert sorted_scores[0].normalized_score >= sorted_scores[1].normalized_score
         assert sorted_scores[1].normalized_score >= sorted_scores[2].normalized_score
@@ -207,12 +207,12 @@ class TestCompareDebtScores:
         """Test comparing debt from different project stages."""
         scores = [
             calculate_score_v2(9, 8, 7, "rapid_evolution"),  # P0, 8.05
-            calculate_score_v2(9, 1, 8, "stable_growth"),    # P1, ~6.93
-            calculate_score_v2(9, 1, 8, "maintenance"),      # P0, ~8.52
+            calculate_score_v2(9, 1, 8, "stable_growth"),  # P1, ~6.93
+            calculate_score_v2(9, 1, 8, "maintenance"),  # P0, ~8.52
         ]
-        
+
         sorted_scores = compare_debt_scores(scores)
-        
+
         # Two P0s should be first, sorted by score
         assert sorted_scores[0].priority == "P0"
         assert sorted_scores[1].priority == "P0"

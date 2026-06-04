@@ -9,7 +9,6 @@ from typing import Literal
 
 from omo_debt.core.stage import StageType, get_normalization_factor, get_stage_weights
 
-
 PriorityType = Literal["P0", "P1", "P2"]
 
 
