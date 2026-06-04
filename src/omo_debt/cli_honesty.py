@@ -248,11 +248,7 @@ def _print_honesty_table(honesty, completeness, consistency, verifiability):
             verifiability.has_cost_evidence,
         ]
     )
-    refs_count = (
-        verifiability.referenced_commits
-        + verifiability.referenced_issues
-        + verifiability.referenced_docs
-    )
+    refs_count = verifiability.referenced_commits + verifiability.referenced_issues + verifiability.referenced_docs
     table.add_row(
         "Verifiability (25%)",
         f"{verifiability.score:.2f}",
