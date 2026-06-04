@@ -17,6 +17,10 @@ from rich.table import Table
 
 from omo_debt.core.scoring import calculate_score_v2
 from omo_debt.core.stage import get_normalization_factor, get_stage_weights, identify_project_stage
+from omo_debt.legacy.age import calculate_age_score
+from omo_debt.legacy.core import adjust_score_with_legacy, calculate_legacy_score
+from omo_debt.legacy.migration import calculate_migration_path_score
+from omo_debt.legacy.resistance import calculate_refactoring_resistance_score
 
 console = Console()
 
@@ -271,6 +275,61 @@ def score(
 
         if "--verbose" in sys.argv:
             traceback.print_exc()
+        sys.exit(1)
+
+
+@cli.command("assess-legacy")
+@click.option("--age-months", type=int, required=True, help="债务存在时长（月）")
+@click.option("--stable-months", type=int, default=0, show_default=True, help="最近稳定期（月）")
+@click.option("--dependency-score", type=float, required=True, help="依赖复杂度分数 (0-10)")
+@click.option("--coupling-score", type=float, required=True, help="耦合度分数 (0-10)")
+@click.option("--technical-risk", type=float, required=True, help="技术风险分数 (0-10)")
+@click.option("--solution-clarity", type=float, required=True, help="方案清晰度分数 (0-10)")
+@click.option("--incremental/--no-incremental", default=True, help="是否支持增量迁移")
+@click.option("--has-migration-docs/--no-migration-docs", default=False, help="是否存在迁移文档")
+@click.option("--base-priority", type=float, default=0.0, show_default=True, help="基础优先级分数 (0-100)")
+def assess_legacy(
+    age_months: int,
+    stable_months: int,
+    dependency_score: float,
+    coupling_score: float,
+    technical_risk: float,
+    solution_clarity: float,
+    incremental: bool,
+    has_migration_docs: bool,
+    base_priority: float,
+):
+    """评估 Legacy (L) 维度并给出优先级调整结果。"""
+    try:
+        age_score = calculate_age_score(age_months=age_months, stable_months=stable_months)
+        resistance_score = calculate_refactoring_resistance_score(
+            dependency_score=dependency_score,
+            coupling_score=coupling_score,
+            technical_risk=technical_risk,
+        )
+        path_score = calculate_migration_path_score(
+            solution_clarity=solution_clarity,
+            incremental=incremental,
+            has_migration_docs=has_migration_docs,
+        )
+        legacy_score = calculate_legacy_score(
+            age_score=age_score,
+            resistance_score=resistance_score,
+            path_score=path_score,
+        )
+        adjusted_priority = adjust_score_with_legacy(base_score=base_priority, legacy_score=legacy_score)
+
+        table = Table(title="Legacy Assessment", show_header=True, header_style="bold magenta")
+        table.add_column("Metric", style="cyan", width=24)
+        table.add_column("Value", style="green")
+        table.add_row("Age Score", f"{age_score:.2f}")
+        table.add_row("Resistance Score", f"{resistance_score:.2f}")
+        table.add_row("Migration Path Score", f"{path_score:.2f}")
+        table.add_row("Legacy Score", f"{legacy_score:.2f}")
+        table.add_row("Adjusted Priority", f"{adjusted_priority:.2f}")
+        console.print(table)
+    except Exception as e:
+        console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
 
