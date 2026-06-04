@@ -15,6 +15,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from omo_debt.__version__ import __version__
 from omo_debt.core.scoring import calculate_score_v2
 from omo_debt.core.stage import get_normalization_factor, get_stage_weights, identify_project_stage
 from omo_debt.legacy.age import calculate_age_score
@@ -26,7 +27,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="omo-debt")
+@click.version_option(version=__version__, prog_name="omo-debt")
 def cli():
     """
     omo-debt: Pattern 09 v2.0 债务评分工具

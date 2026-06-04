@@ -1,7 +1,7 @@
 [project]
 name = "omo-debt"
-version = "0.2.0"
-description = "Pattern 09 v2.0: Project lifecycle stage-aware technical debt scoring CLI tool"
+version = "1.0.0"
+description = "Pattern 09 v2.2: Lifecycle-aware technical debt scoring with Honesty + Legacy dimensions"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -35,11 +35,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/starlink-awaken/omostation"
-Documentation = "https://github.com/starlink-awaken/omostation/tree/main/omo-debt"
-Repository = "https://github.com/starlink-awaken/omostation"
-Issues = "https://github.com/starlink-awaken/omostation/issues"
-Changelog = "https://github.com/starlink-awaken/omostation/blob/main/omo-debt/CHANGELOG.md"
+Homepage = "https://github.com/starlink-awaken/omo-debt"
+Documentation = "https://github.com/starlink-awaken/omo-debt"
+Repository = "https://github.com/starlink-awaken/omo-debt"
+Issues = "https://github.com/starlink-awaken/omo-debt/issues"
+Changelog = "https://github.com/starlink-awaken/omo-debt/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

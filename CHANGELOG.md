@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-04
+
+### Added
+
+#### Pattern 09 v2.2: Legacy Dimension
+- **Legacy scoring system**: Three sub-dimensions (Age, Refactoring Resistance, Migration Path)
+- **Legacy priority adjustment**: +15% / 0% / -10% based on legacy score bands
+- **Standalone command**: `assess-legacy` for independent legacy evaluation
+- **Legacy module**: `omo_debt.legacy` package with reusable scoring functions
+
+### Changed
+- **Version**: 0.2.0 → 1.0.0
+- **Pattern**: v2.1 → v2.2
+- **CLI version source**: Now reads from `omo_debt.__version__`
+- **Project metadata URLs**: Switched to `starlink-awaken/omo-debt` repository
+
+### Quality
+- Unit tests expanded to 69 total (including 10 legacy tests)
+- Lint and formatting checks passing in GitHub Actions
+- GitHub Release v0.2.0 published and artifacts attached
+
 ## [0.2.0] - 2026-06-03
 
 ### Added
@@ -55,3 +76,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [0.2.0]: https://github.com/starlink-awaken/omo-debt/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/starlink-awaken/omo-debt/releases/tag/v0.1.0
+[1.0.0]: https://github.com/starlink-awaken/omo-debt/compare/v0.2.0...v1.0.0
