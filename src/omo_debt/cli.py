@@ -617,6 +617,59 @@ def analyze(project_path: str, debt_file: str | None, output: str | None):
         sys.exit(1)
 
 
+@cli.command()
+@click.option("--source", required=True, help="来源项目 (如 kairon, gbrain, metaos)")
+@click.option("--title", required=True, help="债务标题")
+@click.option("--description", default="", help="债务描述")
+@click.option("--severity", type=click.Choice(["critical", "high", "medium", "low"]), default="medium", help="严重程度")
+@click.option("--output-dir", default=".omo/debt/items", help="输出目录")
+def register(source: str, title: str, description: str, severity: str, output_dir: str):
+    """
+    快速登记技术债务
+
+    自动生成 YAML 文件并注册到债务清单。
+
+    示例：
+        omo-debt register --source kairon --title "缺少原子写入" --severity high
+        omo-debt register --source gbrain --title "JSONL schema校验缺失" --description "需要添加zod校验"
+    """
+    try:
+        from datetime import datetime, timezone
+        import yaml
+
+        # 生成债务 ID
+        debt_id = f"DEBT-{source.upper()}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+
+        # 构建债务数据
+        debt_data = {
+            "id": debt_id,
+            "title": title,
+            "description": description or f"{title} — 由 {source} 项目登记",
+            "severity": severity,
+            "source": source,
+            "registered_at": datetime.now(timezone.utc).isoformat(),
+            "status": "registered",
+        }
+
+        # 写入文件
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        file_path = output_path / f"{debt_id}.yaml"
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            yaml.dump(debt_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        console.print(f"\n[green]✓[/green] 债务已登记：{debt_id}")
+        console.print(f"  来源: {source}")
+        console.print(f"  标题: {title}")
+        console.print(f"  严重程度: {severity}")
+        console.print(f"  文件: {file_path}")
+
+    except Exception as e:
+        console.print(f"[bold red]错误：[/bold red]{e}", style="red")
+        sys.exit(1)
+
+
 def main():
     """CLI 入口点"""
     cli()
