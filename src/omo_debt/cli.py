@@ -5,6 +5,7 @@ Command-line interface for Pattern 09 v2.0 debt scoring tool.
 
 from __future__ import annotations
 
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -24,6 +25,21 @@ from omo_debt.legacy.migration import calculate_migration_path_score
 from omo_debt.legacy.resistance import calculate_refactoring_resistance_score
 
 console = Console()
+
+
+def _resolve_workspace_root() -> Path:
+    """解析 workspace root，优先用环境变量，其次向上查找。"""
+    env_root = os.environ.get("WORKSPACE_ROOT")
+    if env_root:
+        p = Path(env_root)
+        if p.exists():
+            return p
+    # 尝试向上查找 .omo 目录
+    for parent in [Path.cwd()] + list(Path.cwd().parents):
+        if (parent / ".omo").exists() and (parent / "projects").exists():
+            return parent
+    # 降级返回 cwd
+    return Path.cwd()
 
 
 @click.group()
@@ -774,6 +790,233 @@ def route(source: str, severity: str, owner: str, dry_run: bool):
 
         if dry_run:
             console.print("\n[yellow]--dry-run 模式，未写入任何文件[/yellow]")
+
+    except Exception as e:
+        console.print(f"[bold red]错误：[/bold red]{e}", style="red")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option(
+    "--severity",
+    type=click.Choice(["critical", "high", "medium", "low", "all"]),
+    default="high",
+    help="严重程度过滤（默认 high）",
+)
+@click.option("--source", default="all", help="来源过滤（默认 all）")
+@click.option("--output-dir", default=".omo/debt/review-queue", help="review-queue 输出目录")
+@click.option("--dry-run/--no-dry-run", default=False, help="仅预览，不写入")
+def review_queue(severity: str, source: str, output_dir: str, dry_run: bool):
+    """
+    生成债务审查队列
+
+    扫描 .omo/debt/items/ 目录，筛选 severity in [high, critical] 且 status != closed 的债务，
+    为每项生成 review-queue 条目文件。
+
+    示例：
+        omo-debt review-queue --severity high
+        omo-debt review-queue --severity critical --dry-run
+    """
+    try:
+        from datetime import datetime, timezone
+
+        import yaml
+
+        ws_root = _resolve_workspace_root()
+        scan_path = ws_root / ".omo/debt/items"
+        if not scan_path.exists():
+            console.print(f"[bold red]目录不存在：[/bold red]{scan_path}")
+            sys.exit(1)
+
+        debt_files = list(scan_path.glob("DEBT-*.yaml"))
+        if not debt_files:
+            console.print(f"[yellow]未找到债务文件：[/yellow]{scan_path}")
+            return
+
+        # severity 映射到 priority
+        severity_priority_map = {
+            "critical": "P0",
+            "high": "P1",
+        }
+
+        created_count = 0
+        skipped_closed = 0
+        skipped_severity = 0
+        skipped_source = 0
+        errors = []
+
+        for yf in debt_files:
+            try:
+                content = yf.read_text(encoding="utf-8")
+                data = yaml.safe_load(content) or {}
+
+                # 跳过已关闭的
+                if data.get("status") == "closed":
+                    skipped_closed += 1
+                    continue
+
+                # severity 过滤
+                item_severity = (data.get("severity") or "medium").lower()
+                if severity != "all" and item_severity not in severity.split(","):
+                    # 如果 severity 参数包含逗号分隔多个值，逐个匹配
+                    severities = [s.strip().lower() for s in severity.split(",")]
+                    if item_severity not in severities:
+                        skipped_severity += 1
+                        continue
+
+                # source 过滤
+                item_source = data.get("source", "")
+                if source != "all" and item_source != source:
+                    skipped_source += 1
+                    continue
+
+                debt_id = data.get("id", yf.stem)
+
+                # 构建 review-queue 条目
+                queue_entry = {
+                    "debt_id": debt_id,
+                    "task_id": data.get("task_id") or data.get("prerequisite_for") or None,
+                    "owner": data.get("owner") or data.get("assigned_to") or "team-lead",
+                    "reviewers": data.get("reviewers", ["cockpit-team", "omo-team"]),
+                    "status": "pending",
+                    "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "priority": severity_priority_map.get(item_severity, "P2"),
+                    "source_file": str(yf.resolve()),
+                    "severity": item_severity,
+                }
+
+                if dry_run:
+                    console.print(
+                    f"[dim][DRY RUN] 预览：[/dim]"
+                    f"{debt_id} → {queue_entry['owner']} ({queue_entry['priority']})"
+                )
+                    continue
+
+                # 写入 review-queue 文件
+                output_path = ws_root / output_dir
+                output_path.mkdir(parents=True, exist_ok=True)
+                out_file = output_path / f"{debt_id}.yaml"
+
+                with open(out_file, "w", encoding="utf-8") as f:
+                    yaml.dump(queue_entry, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+                created_count += 1
+
+            except Exception as e:
+                errors.append(f"{yf.name}: {e}")
+
+        # 输出结果
+        console.print("\n[bold cyan]Review-Queue 完成：[/bold cyan]")
+        console.print(f"  生成条目：{created_count}")
+        console.print(f"  跳过（已关闭）：{skipped_closed}")
+        console.print(f"  跳过（severity 不匹配）：{skipped_severity}")
+        console.print(f"  跳过（source 不匹配）：{skipped_source}")
+        if errors:
+            console.print(f"  错误：{len(errors)}")
+            for err in errors:
+                console.print(f"    - {err}")
+
+        if dry_run:
+            console.print("\n[yellow]--dry-run 模式，未写入任何文件[/yellow]")
+        else:
+            console.print(f"\n[green]审查队列已生成到：[/green]{output_dir}")
+
+    except Exception as e:
+        console.print(f"[bold red]错误：[/bold red]{e}", style="red")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--source-dir", default=".omo/debt/review-queue", help="review-queue 源目录")
+@click.option("--output-dir", default=".omo/debt/dispatch", help="dispatch 输出目录")
+@click.option("--dry-run/--no-dry-run", default=False, help="仅预览，不写入")
+def dispatch(source_dir: str, output_dir: str, dry_run: bool):
+    """
+    路由审查队列到对应 owner
+
+    扫描 review-queue 目录，按 owner 路由生成 dispatch 条目。
+
+    示例：
+        omo-debt dispatch
+        omo-debt dispatch --dry-run
+    """
+    try:
+        from datetime import datetime, timezone
+
+        import yaml
+
+        ws_root = _resolve_workspace_root()
+        scan_path = ws_root / source_dir
+        if not scan_path.exists():
+            console.print(f"[bold red]目录不存在：[/bold red]{scan_path}")
+            sys.exit(1)
+
+        queue_files = list(scan_path.glob("DEBT-*.yaml"))
+        if not queue_files:
+            console.print(f"[yellow]未找到 review-queue 条目：[/yellow]{scan_path}")
+            return
+
+        dispatched_count = 0
+        skipped_already = 0
+        errors = []
+
+        for qf in queue_files:
+            try:
+                content = qf.read_text(encoding="utf-8")
+                data = yaml.safe_load(content) or {}
+
+                # 跳过非 pending 状态
+                if data.get("status") != "pending":
+                    skipped_already += 1
+                    continue
+
+                debt_id = data.get("debt_id", qf.stem)
+                owner = data.get("owner", "team-lead")
+                now = datetime.now(timezone.utc).isoformat()
+
+                # 构建 dispatch 条目
+                dispatch_entry = {
+                    "debt_id": debt_id,
+                    "task_id": data.get("task_id"),
+                    "owner": owner,
+                    "reviewers": data.get("reviewers", ["cockpit-team", "omo-team"]),
+                    "status": "dispatched",
+                    "dispatched_at": now,
+                    "created_at": data.get("created_at"),
+                    "priority": data.get("priority", "P2"),
+                    "source_file": data.get("source_file"),
+                }
+
+                if dry_run:
+                    console.print(f"[dim][DRY RUN] 预览：[/dim]{debt_id} → {owner}")
+                    continue
+
+                # 写入 owner 目录
+                owner_dir = ws_root / output_dir / owner
+                owner_dir.mkdir(parents=True, exist_ok=True)
+                out_file = owner_dir / f"{debt_id}.yaml"
+
+                with open(out_file, "w", encoding="utf-8") as f:
+                    yaml.dump(dispatch_entry, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+                dispatched_count += 1
+
+            except Exception as e:
+                errors.append(f"{qf.name}: {e}")
+
+        # 输出结果
+        console.print("\n[bold cyan]Dispatch 完成：[/bold cyan]")
+        console.print(f"  路由成功：{dispatched_count}")
+        console.print(f"  跳过（非 pending）：{skipped_already}")
+        if errors:
+            console.print(f"  错误：{len(errors)}")
+            for err in errors:
+                console.print(f"    - {err}")
+
+        if dry_run:
+            console.print("\n[yellow]--dry-run 模式，未写入任何文件[/yellow]")
+        else:
+            console.print(f"\n[green]Dispatch 已生成到：[/green]{output_dir}")
 
     except Exception as e:
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
