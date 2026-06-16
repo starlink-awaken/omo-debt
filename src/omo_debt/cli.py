@@ -635,6 +635,7 @@ def register(source: str, title: str, description: str, severity: str, output_di
     """
     try:
         from datetime import datetime, timezone
+
         import yaml
 
         # 生成债务 ID
@@ -664,6 +665,115 @@ def register(source: str, title: str, description: str, severity: str, output_di
         console.print(f"  标题: {title}")
         console.print(f"  严重程度: {severity}")
         console.print(f"  文件: {file_path}")
+
+    except Exception as e:
+        console.print(f"[bold red]错误：[/bold red]{e}", style="red")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--source", default=".omo/tasks/planned", help="扫描目录（默认 .omo/tasks/planned）")
+@click.option("--severity", type=click.Choice(["P0", "P1", "P2", "P3", "all"]), default="all", help="按严重程度过滤")
+@click.option("--owner", default="team-lead", help="路由 owner（默认 team-lead）")
+@click.option("--dry-run/--no-dry-run", default=False, help="仅预览，不写入")
+def route(source: str, severity: str, owner: str, dry_run: bool):
+    """
+    给待路由的债务/任务添加 owner routing 字段
+
+    扫描指定目录下 status != closed 的 YAML 文件，按严重程度路由：
+    - P0 → cockpit-team
+    - P1 → omo-team
+    - P2/P3/unknown → --owner（或 team-lead）
+
+    添加字段：owner, routed_at, routed_by
+
+    示例：
+        omo-debt route  # 路由所有非关闭项到 team-lead
+        omo-debt route --severity P0 --owner cockpit-team
+        omo-debt route --dry-run  # 仅预览
+    """
+    try:
+        from datetime import datetime, timezone
+
+        import yaml
+
+        scan_path = Path(source)
+        if not scan_path.exists():
+            console.print(f"[bold red]目录不存在：[/bold red]{scan_path}")
+            sys.exit(1)
+
+        # severity → owner 映射（X3 价值栈）
+        severity_owner_map = {
+            "P0": "cockpit-team",
+            "P1": "omo-team",
+            "P2": owner,
+            "P3": owner,
+            "all": owner,
+        }
+
+        yaml_files = list(scan_path.glob("*.yaml"))
+        if not yaml_files:
+            console.print(f"[yellow]未找到 YAML 文件：[/yellow]{scan_path}")
+            return
+
+        routed_count = 0
+        skipped_closed = 0
+        skipped_severity = 0
+        errors = []
+
+        for yf in yaml_files:
+            try:
+                content = yf.read_text(encoding="utf-8")
+                data = yaml.safe_load(content) or {}
+
+                # 跳过已关闭的
+                if data.get("status") == "closed":
+                    skipped_closed += 1
+                    continue
+
+                # severity 过滤
+                item_severity = data.get("priority", "")
+                if severity != "all" and item_severity != severity:
+                    skipped_severity += 1
+                    continue
+
+                # 确定 owner（X3 价值栈路由）
+                assigned_owner = severity_owner_map.get(item_severity, owner)
+                if item_severity == "all":
+                    assigned_owner = owner
+
+                now = datetime.now(timezone.utc).isoformat()
+
+                # 添加 routing 字段
+                data["owner"] = assigned_owner
+                data["routed_at"] = now
+                data["routed_by"] = "omo-debt route"
+
+                if dry_run:
+                    console.print(f"[dim][DRY RUN] 预览：[/dim]{yf.name} → {assigned_owner}")
+                    continue
+
+                # 写回文件（保留原有 YAML 流格式）
+                with open(yf, "w", encoding="utf-8") as f:
+                    yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+                routed_count += 1
+
+            except Exception as e:
+                errors.append(f"{yf.name}: {e}")
+
+        # 输出结果
+        console.print("\n[bold cyan]Route 完成：[/bold cyan]")
+        console.print(f"  路由成功：{routed_count}")
+        console.print(f"  跳过（已关闭）：{skipped_closed}")
+        console.print(f"  跳过（severity 不匹配）：{skipped_severity}")
+        if errors:
+            console.print(f"  错误：{len(errors)}")
+            for err in errors:
+                console.print(f"    - {err}")
+
+        if dry_run:
+            console.print("\n[yellow]--dry-run 模式，未写入任何文件[/yellow]")
 
     except Exception as e:
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
