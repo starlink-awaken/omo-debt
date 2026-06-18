@@ -3,7 +3,8 @@
 > **Layer**: L2 引擎面  
 > **Role**: 技术债务评分 CLI — 从 omo 拆出的债务生命周期子系统  
 > **Stack**: Python 3.10+, uv, click, rich, pydantic, gitpython  
-> **Health**: Unit tests in tests/
+> **Health**: See local CI and test verification
+> **SSOT**: 运行时健康、测试状态以本项目 CI、本地验证和 workspace governance SSOT 为准
 >
 > 系统全景参见：[`docs/ARCHITECTURE-DIAGRAM.md`](../docs/ARCHITECTURE-DIAGRAM.md)
 
