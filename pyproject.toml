@@ -3,7 +3,7 @@ name = "omo-debt"
 version = "1.0.0"
 description = "Pattern 09 v2.2: Lifecycle-aware technical debt scoring with Honesty + Legacy dimensions"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 license = {text = "MIT"}
 authors = [
     {name = "starlink-awaken", email = "starlink.awaken@example.com"}
