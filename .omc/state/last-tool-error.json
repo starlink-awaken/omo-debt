@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"echo \\\"=== python3 直接 py_compile (绕 uv 依赖解析) ===\\\" && python3 -m py_compile src/omo/omo_debt_cli.py && echo \\\"✅ omo_debt_cli.py 语法 OK\\\" && echo \\\"\\\" && echo \\\"=== uv run pytest 是否受 agora 冲...",
+  "error": "Exit code 1\n=== python3 直接 py_compile (绕 uv 依赖解析) ===\n[Errno 2] No such file or directory: 'src/omo/omo_debt_cli.py'",
+  "timestamp": "2026-06-19T14:30:26.298Z",
+  "retry_count": 1
+}

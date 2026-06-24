@@ -1025,6 +1025,7 @@ def dispatch(source_dir: str, output_dir: str, dry_run: bool):
 
 def main():
     """CLI 入口点"""
+    print("⚠️ OMO-Debt 独立 CLI 已弃用，请使用 cockpit 替代", file=sys.stderr)
     cli()
 
 
