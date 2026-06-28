@@ -138,7 +138,7 @@ def _identify_problematic_files(project_path: str) -> set[str]:
             repo = Repo(project_path)
             churn_files = _get_high_churn_files(repo, threshold_percentile=80)
             problematic.update(churn_files)
-    except (InvalidGitRepositoryError, Exception):
+    except (InvalidGitRepositoryError, Exception):  # noqa: BLE001
         pass  # Git not available or not a repo
 
     # Heuristic 2: Large files + Heuristic 3: TODO/FIXME markers
@@ -174,7 +174,7 @@ def _identify_problematic_files(project_path: str) -> set[str]:
                 if "TODO" in content or "FIXME" in content or "XXX" in content:
                     problematic.add(str(relative_path))
 
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue  # Skip files with read errors
 
     return problematic
@@ -207,10 +207,10 @@ def _get_high_churn_files(repo: "Repo", threshold_percentile: int = 80) -> set[s
             try:
                 for item in commit.stats.files.keys():
                     churn_count[item] += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
-    except Exception:
+    except Exception:  # noqa: BLE001
         return set()  # Git analysis failed
 
     if not churn_count:

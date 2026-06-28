@@ -103,7 +103,7 @@ def identify_stage(project_path: str, months: int, verbose: bool):
         if verbose:
             console.print(f"\n[dim]项目路径：{path}[/dim]")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
@@ -286,7 +286,7 @@ def score(
 
         console.print(Panel(recommendation.strip(), title="[bold green]建议[/bold green]"))
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         import traceback
 
@@ -345,7 +345,7 @@ def assess_legacy(
         table.add_row("Legacy Score", f"{legacy_score:.2f}")
         table.add_row("Adjusted Priority", f"{adjusted_priority:.2f}")
         console.print(table)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
@@ -462,7 +462,7 @@ def compare(debt_files: tuple[str, ...], format: str):
 
             console.print(yaml.dump(debts, allow_unicode=True, default_flow_style=False))
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
@@ -628,7 +628,7 @@ def analyze(project_path: str, debt_file: str | None, output: str | None):
         else:
             console.print("[yellow]未找到债务清单，请使用 --debt-file 指定债务文件[/yellow]")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
@@ -682,7 +682,7 @@ def register(source: str, title: str, description: str, severity: str, output_di
         console.print(f"  严重程度: {severity}")
         console.print(f"  文件: {file_path}")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
@@ -775,7 +775,7 @@ def route(source: str, severity: str, owner: str, dry_run: bool):
 
                 routed_count += 1
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 errors.append(f"{yf.name}: {e}")
 
         # 输出结果
@@ -791,7 +791,7 @@ def route(source: str, severity: str, owner: str, dry_run: bool):
         if dry_run:
             console.print("\n[yellow]--dry-run 模式，未写入任何文件[/yellow]")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
@@ -902,7 +902,7 @@ def review_queue(severity: str, source: str, output_dir: str, dry_run: bool):
 
                 created_count += 1
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 errors.append(f"{yf.name}: {e}")
 
         # 输出结果
@@ -921,7 +921,7 @@ def review_queue(severity: str, source: str, output_dir: str, dry_run: bool):
         else:
             console.print(f"\n[green]审查队列已生成到：[/green]{output_dir}")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
@@ -1001,7 +1001,7 @@ def dispatch(source_dir: str, output_dir: str, dry_run: bool):
 
                 dispatched_count += 1
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 errors.append(f"{qf.name}: {e}")
 
         # 输出结果
@@ -1018,7 +1018,7 @@ def dispatch(source_dir: str, output_dir: str, dry_run: bool):
         else:
             console.print(f"\n[green]Dispatch 已生成到：[/green]{output_dir}")
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[bold red]错误：[/bold red]{e}", style="red")
         sys.exit(1)
 
