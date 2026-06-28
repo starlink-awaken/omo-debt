@@ -1,48 +1,51 @@
-# AGENTS.md — OMO Debt
+# AGENTS.md — omo-debt
 
-> eCOS v5 债务管理工具 · 技术债务 + 治理债务 + 改革债务 生命周期管理
+    > Scope: project-local developer guide for `omo-debt`.
+    > Workspace rules live in [`../../AGENTS.md`](../../AGENTS.md); project metadata lives in [`../../docs/project-registry.yaml`](../../docs/project-registry.yaml).
 
-## Quick Commands
+    ## Role
 
-```bash
-cd projects/omo-debt
-uv run pytest tests/ -q
-uv run ruff check src/
-```
+    - Layer: X
+    - Stack: Python / uv / pytest
+    - Responsibility: 技术债务评分与分级 CLI
 
-## Architecture
+    Do not copy volatile facts such as test counts, tool counts, service counts, ports, or current health into this file.
 
-OMO 治理体系中的债务子系统：
+    ## Before Editing
 
-```
-omo/                  ── OMO 治理引擎
-omo-debt/             ── 债务生命周期管理（本仓）
-omo-debt 原为 omo 的一部分，独立部署以解耦
-```
+    1. Read this file and [`CLAUDE.md`](CLAUDE.md) when it exists.
+    2. Check `git status --short` inside this project and at the workspace root.
+    3. Read the specific source or tests you are about to change.
+    4. Prefer project-local commands and targeted tests.
 
-### 债务类型
+    ## Commands
 
-| 类型 | 说明 |
-|:-----|:------|
-| 技术债务 | 代码质量、测试覆盖、架构违规 |
-| 治理债务 | 文档缺失、流程违规、SSOT 偏离 |
-| 改革债务 | 遗留迁移、API 版本对齐、架构重构 |
+    ```bash
+    uv sync
+uv run pytest "tests/unit/" -q
+uv run ruff check "."
+    ```
 
-## Dependencies
+    ## Key Files
 
-- Python >=3.10, uv
+    - `src/omo_debt/`
+- `tests/unit/`
+- `pyproject.toml`
 
-## Testing
+    ## Gotchas
 
-```bash
-uv run pytest tests/ -q
-```
+    - `评分算法版本以代码/测试/发布说明为准。`
+- 示例可以保留，测试数量不要写成事实快照。
 
-## Workspace-Wide Governance (2026-06-24)
+    ## Verification
 
-This project follows the workspace-level governance conventions documented in the root `AGENTS.md`:
+    - Documentation-only changes: run `uv run --with "pyyaml" python "../../bin/doc-ssot-lint.py" --json` from this project or from the workspace root.
+    - Code changes: run the narrowest relevant project test first, then broaden if shared contracts changed.
+    - Cross-layer behavior: verify the caller and the callee, not just the touched module.
 
-- **Agent Mutation Protocol**: Any autonomous agent/cron/daemon that modifies workspace state must emit `agent_mutation_intent`, avoid direct file I/O to `.omo/`/`spaces/`, and commit immediately. See `.omo/standards/agent-mutation-protocol.md` for the full protocol.
-- **SSOT Guardian**: Run `python3 bin/ssot-guardian.py` from the workspace root before committing to detect task-count, current-wave, submodule-pointer, or direct-omo-io drift.
-- **direct-omo-io**: Scripts must route writes to `.omo/` through `omo CLI`, `projects/omo` core, or `projects/c2g` ingress — never via raw `open()/mkdir()/write_text()`.
-- **Submodule Governance**: Commit changes inside the submodule first, then bump the root-repo pointer; `git submodule status` with a `+` prefix indicates pending drift.
+    ## SSOT Pointers
+
+    - Workspace architecture: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md)
+    - Layer index: [`../../LAYER-INDEX.md`](../../LAYER-INDEX.md)
+    - Project metadata: [`../../docs/project-registry.yaml`](../../docs/project-registry.yaml)
+    - Runtime state: [`../../.omo/state/system.yaml`](../../.omo/state/system.yaml)
