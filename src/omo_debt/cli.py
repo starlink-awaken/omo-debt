@@ -1029,6 +1029,62 @@ def main():
     cli()
 
 
+@cli.command(name="gac-report")
+@click.option("--omo-dir", default=".omo", help="OMO 目录路径")
+def gac_report(omo_dir: str):
+    """报告 GaC 规则相关的技术债务状态 (omo-debt → GaC 集成).
+
+    读取 GaC 注册表, 统计 drift/missing/orphan 债务项,
+    输出按维度分组的债务摘要供 omo-debt 评分消费.
+    """
+    import yaml as _yaml
+
+    ws_root = _resolve_workspace_root()
+    reg_path = ws_root / omo_dir / "_truth" / "registry" / "governance-checks.yaml"
+
+    if not reg_path.exists():
+        console.print("[yellow]GaC 注册表未找到, 跳过[/yellow]")
+        return
+
+    docs = [d for d in _yaml.safe_load_all(reg_path.read_text(encoding="utf-8")) if d]
+    rules = docs[-1].get("gac", {}).get("rules", []) if docs else []
+
+    by_dim: dict[str, list] = {}
+    for r in rules:
+        dim = r.get("dimension", "?")
+        by_dim.setdefault(dim, []).append(r)
+
+    console.print(Panel.fit(
+        f"[bold]GaC Debt Report[/bold]\n"
+        f"Total rules: {len(rules)}\n"
+        f"Dimensions: {len(by_dim)}",
+        title="omo-debt → GaC",
+    ))
+
+    table = Table(title="GaC Rules by Dimension")
+    table.add_column("Dimension", style="cyan")
+    table.add_column("Count", justify="right")
+    table.add_column("Active", justify="right")
+    table.add_column("Drift Risk", justify="right")
+
+    for dim in sorted(by_dim.keys()):
+        dim_rules = by_dim[dim]
+        active = sum(1 for r in dim_rules if r.get("lifecycle") == "active")
+        drift_risk = sum(1 for r in dim_rules if r.get("check_type") == "legacy_index")
+        table.add_row(dim, str(len(dim_rules)), str(active), str(drift_risk))
+
+    console.print(table)
+
+    # Output machine-readable summary
+    summary = {
+        "total_rules": len(rules),
+        "by_dimension": {dim: len(rs) for dim, rs in by_dim.items()},
+        "active": sum(1 for r in rules if r.get("lifecycle") == "active"),
+    }
+    console.print("\n[dim]JSON summary:[/dim]")
+    console.print_json(data=summary)
+
+
 if __name__ == "__main__":
     main()
 
