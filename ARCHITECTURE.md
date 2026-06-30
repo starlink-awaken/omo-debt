@@ -6,7 +6,7 @@
 > **Health**: See local CI and test verification
 > **SSOT**: 运行时健康、测试状态以本项目 CI、本地验证和 workspace governance SSOT 为准
 >
-> 系统全景参见：[`docs/ARCHITECTURE-DIAGRAM.md`](../docs/ARCHITECTURE-DIAGRAM.md)
+> 系统全景参见：[`../../docs/PANORAMA.md`](../../docs/PANORAMA.md)
 
 ---
 
