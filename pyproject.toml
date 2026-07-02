@@ -43,7 +43,7 @@ Changelog = "https://github.com/starlink-awaken/omo-debt/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=9.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.3.0",
 ]
@@ -72,7 +72,7 @@ addopts = "-v --cov=src/omo_debt --cov-report=term-missing"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=9.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.3.0",
 ]
