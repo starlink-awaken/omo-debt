@@ -29,3 +29,7 @@
 - 项目源码：`projects/omo-debt/`
 - 入口定义：`projects/omo-debt/pyproject.toml` 或 `package.json`
 - 测试：`cd projects/omo-debt && uv run pytest tests/ -q`
+
+## 架构演进与项目边界索引
+
+参见工作区架构演进与项目边界：[`../../docs/ARCHITECTURE-EVOLUTION.md`](../../docs/ARCHITECTURE-EVOLUTION.md)
