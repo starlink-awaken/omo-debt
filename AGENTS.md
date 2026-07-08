@@ -5,7 +5,7 @@
 
     ## Role
 
-    - Layer: X
+    - Layer: L2
     - Stack: Python / uv / pytest
     - Responsibility: 技术债务评分与分级 CLI
 

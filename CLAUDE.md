@@ -12,7 +12,7 @@
 
 ## Project Role
 
-- Layer: X
+- Layer: L2
 - Responsibility: 技术债务评分与分级 CLI
 - Stack: Python / uv / pytest
 

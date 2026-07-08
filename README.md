@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/)
 [![uv](https://img.shields.io/badge/uv-package%20manager-purple.svg)](https://docs.astral.sh/uv/)
 
-    > X · 技术债务评分与分级 CLI
+    > L2 · 技术债务评分与分级 CLI
     > Metadata SSOT: [`../../docs/project-registry.yaml`](../../docs/project-registry.yaml)
 
     ## What It Owns

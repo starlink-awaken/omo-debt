@@ -1,6 +1,6 @@
 # omo-debt Documentation
 
-> X · 技术债务评分 CLI
+> L2 · 技术债务评分 CLI
 > Stack: Python
 
 This directory collects project-level documentation for **omo-debt**.
