@@ -19,9 +19,9 @@ class HonestyScore:
     assessed_at: str  # ISO timestamp
 
     # Evidence references
-    evidence_commits: list[str] = None
-    evidence_issues: list[str] = None
-    evidence_refs: list[str] = None
+    evidence_commits: list[str] = None  # type: ignore[reportAssignmentType]
+    evidence_issues: list[str] = None  # type: ignore[reportAssignmentType]
+    evidence_refs: list[str] = None  # type: ignore[reportAssignmentType]
 
     def __post_init__(self):
         """Initialize empty lists if None."""

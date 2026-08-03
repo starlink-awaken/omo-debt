@@ -180,7 +180,7 @@ def _identify_problematic_files(project_path: str) -> set[str]:
     return problematic
 
 
-def _get_high_churn_files(repo: "Repo", threshold_percentile: int = 80) -> set[str]:
+def _get_high_churn_files(repo: "Repo", threshold_percentile: int = 80) -> set[str]:  # type: ignore[reportInvalidTypeForm]
     """Get files with high churn rate (top X percentile).
 
     Args:

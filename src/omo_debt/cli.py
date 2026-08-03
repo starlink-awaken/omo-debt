@@ -90,8 +90,8 @@ def identify_stage(project_path: str, months: int, verbose: bool):
 
         console.print(table)
 
-        weights = get_stage_weights(result.stage)
-        norm_factor = get_normalization_factor(result.stage)
+        weights = get_stage_weights(result.stage)  # type: ignore[reportArgumentType]
+        norm_factor = get_normalization_factor(result.stage)  # type: ignore[reportArgumentType]
         panel_content = f"""
 [bold]推荐配置：[/bold]
 • 权重比例：影响 {weights[0]:.2f} / 频繁度 {weights[1]:.2f} / 成本 {weights[2]:.2f}
@@ -153,7 +153,7 @@ def score(
             console.print(f"[dim]检测到阶段：{stage}[/dim]\n")
 
         # 计算基础分数
-        result = calculate_score_v2(impact=impact, frequency=frequency, cost=cost, stage=stage)
+        result = calculate_score_v2(impact=impact, frequency=frequency, cost=cost, stage=stage)  # type: ignore[reportArgumentType]
 
         # 诚实度评估 (Pattern 09 v2.1)
         honesty_score = None
@@ -506,7 +506,7 @@ def analyze(project_path: str, debt_file: str | None, output: str | None):
                         impact=debt_data["impact"],
                         frequency=debt_data["frequency"],
                         cost=debt_data["cost"],
-                        stage=debt_data.get("stage") or stage_info.stage,
+                        stage=debt_data.get("stage") or stage_info.stage,  # type: ignore[reportArgumentType]
                     )
 
                     debts.append(
@@ -887,9 +887,8 @@ def review_queue(severity: str, source: str, output_dir: str, dry_run: bool):
 
                 if dry_run:
                     console.print(
-                    f"[dim][DRY RUN] 预览：[/dim]"
-                    f"{debt_id} → {queue_entry['owner']} ({queue_entry['priority']})"
-                )
+                        f"[dim][DRY RUN] 预览：[/dim]{debt_id} → {queue_entry['owner']} ({queue_entry['priority']})"
+                    )
                     continue
 
                 # 写入 review-queue 文件
@@ -1054,12 +1053,12 @@ def gac_report(omo_dir: str):
         dim = r.get("dimension", "?")
         by_dim.setdefault(dim, []).append(r)
 
-    console.print(Panel.fit(
-        f"[bold]GaC Debt Report[/bold]\n"
-        f"Total rules: {len(rules)}\n"
-        f"Dimensions: {len(by_dim)}",
-        title="omo-debt → GaC",
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold]GaC Debt Report[/bold]\nTotal rules: {len(rules)}\nDimensions: {len(by_dim)}",
+            title="omo-debt → GaC",
+        )
+    )
 
     table = Table(title="GaC Rules by Dimension")
     table.add_column("Dimension", style="cyan")
