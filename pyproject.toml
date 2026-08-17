@@ -4,11 +4,17 @@ version = "1.0.0"
 description = "Pattern 09 v2.2: Lifecycle-aware technical debt scoring with Honesty + Legacy dimensions"
 readme = "README.md"
 requires-python = ">=3.13"
-license = {text = "MIT"}
 authors = [
-    {name = "starlink-awaken", email = "starlink.awaken@example.com"}
+    { name = "starlink-awaken", email = "starlink.awaken@example.com" },
 ]
-keywords = ["technical-debt", "code-quality", "lifecycle", "pattern09", "omo", "cli"]
+keywords = [
+    "technical-debt",
+    "code-quality",
+    "lifecycle",
+    "pattern09",
+    "omo",
+    "cli",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -24,7 +30,6 @@ classifiers = [
     "Topic :: Software Development :: Bug Tracking",
     "Typing :: Typed",
 ]
-
 dependencies = [
     "click>=8.1.0",
     "pyyaml>=6.0.3",
@@ -33,6 +38,9 @@ dependencies = [
     "pydantic>=2.13.4",
     "tabulate>=0.9.0",
 ]
+
+[project.license]
+text = "MIT"
 
 [project.urls]
 Homepage = "https://github.com/starlink-awaken/omo-debt"
@@ -52,22 +60,61 @@ dev = [
 omo-debt = "omo_debt.cli:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+]
 build-backend = "hatchling.build"
 
 [tool.ruff]
+target-version = "py313"
 line-length = 120
-target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W"]
-ignore = []
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "N",
+    "UP",
+    "S",
+    "PLE",
+    "RUF100",
+]
+ignore = [
+    "E402",
+    "E501",
+    "F401",
+    "N813",
+    "S101",
+    "S108",
+    "S110",
+    "S112",
+    "S310",
+    "S314",
+    "S603",
+    "S607",
+    "S608",
+    "SIM115",
+    "UP047",
+]
+
+[tool.ruff.format]
+quote-style = "double"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+testpaths = [
+    "tests",
+]
+python_files = [
+    "test_*.py",
+]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]
 addopts = "-v --cov=src/omo_debt --cov-report=term-missing"
 
 [dependency-groups]

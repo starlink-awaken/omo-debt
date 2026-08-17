@@ -5,6 +5,7 @@ Implements Pattern 09 v2.1 honesty dimension.
 """
 
 from dataclasses import dataclass
+from datetime import UTC
 from typing import Optional
 
 
@@ -67,10 +68,10 @@ def calculate_honesty_score(
     completeness: float,
     consistency: float,
     verifiability: float,
-    assessed_at: Optional[str] = None,
-    evidence_commits: Optional[list[str]] = None,
-    evidence_issues: Optional[list[str]] = None,
-    evidence_refs: Optional[list[str]] = None,
+    assessed_at: str | None = None,
+    evidence_commits: list[str] | None = None,
+    evidence_issues: list[str] | None = None,
+    evidence_refs: list[str] | None = None,
 ) -> HonestyScore:
     """Calculate overall honesty score from sub-dimensions.
 
@@ -108,7 +109,7 @@ def calculate_honesty_score(
     if assessed_at is None:
         from datetime import datetime, timezone
 
-        assessed_at = datetime.now(timezone.utc).isoformat()
+        assessed_at = datetime.now(UTC).isoformat()
 
     return HonestyScore(
         score=overall_score,
