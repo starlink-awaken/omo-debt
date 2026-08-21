@@ -104,7 +104,12 @@ def identify_project_stage(
         raise FileNotFoundError(f"Path does not exist: {repo_path}")
 
     try:
-        repo = Repo(repo_path)
+        # search_parent_directories=True lets the target path be a *subdir* of
+        # a Git repo (e.g. `<repo>/.omo`), not just the repo root. Without it,
+        # `omo-debt analyze .omo` fails with InvalidGitRepositoryError because
+        # the `.omo` state dir carries no `.git` of its own (regression in the
+        # daily OMO Autopilot run: "Not a valid Git repository: .../.omo").
+        repo = Repo(repo_path, search_parent_directories=True)
     except InvalidGitRepositoryError as e:
         raise InvalidGitRepositoryError(f"Not a valid Git repository: {repo_path}") from e
 
